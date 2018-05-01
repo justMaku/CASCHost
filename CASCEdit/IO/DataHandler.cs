@@ -130,19 +130,6 @@ namespace CASCEdit.IO
 		{
 			CASContainer.Logger.LogInformation("Writing data...");
 
-			var path = Path.Combine(CASContainer.Settings.OutputPath, "Data", "data");
-			string filename = "dummy.000";
-
-			// calculate local data file
-			if (mode.HasFlag(WriteMode.Data))
-			{
-				Directory.CreateDirectory(path);
-
-				long requiredBytes = entries.Sum(x => x.Data.Length) + 38 + (entries.Count() > 1 ? 5 : 0) + (entries.Count() * 24);
-				if (mode.HasFlag(WriteMode.Data))
-					filename = GetDataFile(requiredBytes);
-			}
-
 			using (var md5 = MD5.Create())
 			using (MemoryStream ms = new MemoryStream())
 			using (BinaryWriter bw = new BinaryWriter(ms, Encoding.ASCII))
@@ -203,8 +190,12 @@ namespace CASCEdit.IO
 				// Update .data file
 				if (mode.HasFlag(WriteMode.Data))
 				{
+					var path = Path.Combine(CASContainer.Settings.OutputPath, "Data", "data");
 					Directory.CreateDirectory(path);
 
+					long requiredBytes = entries.Sum(x => x.Data.Length) + 38 + (entries.Count() > 1 ? 5 : 0) + (entries.Count() * 24);
+					var filename = GetDataFile(requiredBytes);
+						
 					using (FileStream fs = new FileStream(Path.Combine(path, filename), FileMode.OpenOrCreate, FileAccess.ReadWrite))
 					{
 						fs.Seek(0, SeekOrigin.End);
