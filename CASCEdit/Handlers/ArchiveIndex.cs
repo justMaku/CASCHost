@@ -174,7 +174,7 @@ namespace CASCEdit.Handlers
 				//Save file to output
 				string filename = ComputeFilename(bw, md5, posFooterStart);
 
-				var path = Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, filename + ".index"));
+				var path = Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, filename + ".index"), "data");
 				using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
 				{
 					ms.Position = 0;
