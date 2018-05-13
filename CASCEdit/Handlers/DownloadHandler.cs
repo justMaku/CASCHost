@@ -194,7 +194,12 @@ namespace CASCEdit.Handlers
 			using (var md5 = MD5.Create())
 				res.DataHash = new MD5Hash(md5.ComputeHash(entries.SelectMany(x => x).ToArray()));
 
-			File.Delete(Path.Combine(CASContainer.Settings.OutputPath, CASContainer.BuildConfig["download"][0]));
+			if (CASContainer.BuildConfig["download"][0] != null) {
+				var path = Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, CASContainer.BuildConfig["download"][0]));
+				if (File.Exists(path)) {
+					File.Delete(path);
+				}
+			}
 
 			CASContainer.Logger.LogInformation($"Download: Hash: {res.Hash} Data: {res.DataHash}");
 			CASContainer.BuildConfig.Set("download-size", res.DecompressedSize.ToString());

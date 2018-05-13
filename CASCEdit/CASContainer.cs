@@ -547,7 +547,7 @@ namespace CASCEdit
                 idxInfo = LocalIndexHandler?.GetIndexInfo(enc.Keys[0]);
                 if (idxInfo != null)
                 {
-                    path = Path.Combine(BasePath, "Data", "data", string.Format("data.{0:D3}", idxInfo.Archive));
+                    path = Path.Combine(BasePath, "Data", "data", string.Format("data.{0:X2}", idxInfo.Archive));
                     DataHandler.Extract(path, Path.Combine(savepath, enc.Keys[0].ToString()), idxInfo);
                 }
                 else
