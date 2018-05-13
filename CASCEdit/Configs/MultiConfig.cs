@@ -15,6 +15,13 @@ namespace CASCEdit.Configs
         private readonly Dictionary<string, List<string>> Data = new Dictionary<string, List<string>>();
         public List<string> this[string key] => Data.ContainsKey(key) ? Data[key] : new List<string>(new string[2]);
 
+        public MultiConfig(Dictionary<string, List<string>> defaults)
+        {
+            foreach (var entry in defaults) {
+                Data.Add(entry.Key, entry.Value);
+            }
+        }
+
         public MultiConfig(string file)
         {
             BasePath = file;

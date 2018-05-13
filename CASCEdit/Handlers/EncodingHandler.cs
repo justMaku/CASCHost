@@ -25,16 +25,24 @@ namespace CASCEdit.Handlers
 
 		public EncodingHandler()
 		{
-			Header = new EncodingHeader();
+			Header = new EncodingHeader()
+            {
+                FlagsA = 1024,
+                FlagsB = 1024,
+                ChecksumSizeA = 16,
+                ChecksumSizeB = 16,
+                Version = 1
+            };
+
 			EncodingMap = new[]
 			{
 				new EncodingMap(EncodingType.None, 6),
-				new EncodingMap(EncodingType.ZLib, 9),
 				new EncodingMap(EncodingType.None, 6),
 				new EncodingMap(EncodingType.None, 6),
 				new EncodingMap(EncodingType.None, 6),
 				new EncodingMap(EncodingType.None, 6),
-				new EncodingMap(EncodingType.ZLib, 9),
+				new EncodingMap(EncodingType.None, 6),
+				new EncodingMap(EncodingType.None, 6),
 			};
 		}
 
@@ -173,7 +181,7 @@ namespace CASCEdit.Handlers
             int stridx = LayoutStringTable.IndexOf(layoutString);
             if (stridx == -1)
             {
-                stridx = LayoutStringTable.Count - 2; // ignore the 0 byte
+                stridx = LayoutStringTable.Count;
                 LayoutStringTable.Insert(stridx, layoutString);
             }
 
@@ -194,7 +202,7 @@ namespace CASCEdit.Handlers
             CASFile[] files = new CASFile[EncodingMap.Length];
 
             //StringTable A 1
-            entries[1] = Encoding.UTF8.GetBytes(string.Join("\0", LayoutStringTable));
+            entries[1] = Encoding.UTF8.GetBytes(string.Join("\0", LayoutStringTable)).Concat(new byte[] {0x00}).ToArray();
             files[1] = new CASFile(entries[1], EncodingMap[1].Type, EncodingMap[1].CompressionLevel);
 
             //Data Blocks 3
@@ -308,7 +316,7 @@ namespace CASCEdit.Handlers
                 bw.Write(Header.FlagsB);
                 bw.WriteUInt32BE((uint)entries[2].Length / 32);
                 bw.WriteUInt32BE((uint)entries[4].Length / 32);
-                bw.WriteUInt40BE((ulong)Encoding.UTF8.GetByteCount(string.Join("\0", LayoutStringTable)));
+                bw.WriteUInt40BE((ulong)Encoding.UTF8.GetByteCount(string.Join("\0", LayoutStringTable)) + 1);
 
                 entries[0] = ms.ToArray();
                 files[0] = new CASFile(entries[0], EncodingMap[0].Type, EncodingMap[0].CompressionLevel);

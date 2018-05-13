@@ -27,6 +27,7 @@ namespace CASCEdit.Handlers
 		public RootHandler()
 		{
 			GlobalRoot = new RootChunk() { ContentFlags = ContentFlags.None, LocaleFlags = LocaleFlags.All_WoW };
+			Chunks.Add(GlobalRoot);
 			encodingMap = new EncodingMap(EncodingType.ZLib, 9);
 		}
 

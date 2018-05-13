@@ -11,19 +11,67 @@ namespace CASCEdit.Configs
 {
     public class SingleConfig
     {
-        private readonly Dictionary<string, string> Data = new Dictionary<string, string>();
+        public class Column {
+            public string Name;
+            public string Type;
+            public int Length;
+
+
+            public Column(string name, string type, int length) 
+            {
+                Name = name;
+                Type = type;
+                Length = length;
+            }
+
+            public static Column withString(string name)
+            {
+                return new Column(name, "STRING", 0);
+            }
+
+            public static Column withHex(string name, int length)
+            {
+                return new Column(name, "HEX", length);
+            }
+
+            override public string ToString() {
+                return String.Format("{0}!{1}:{2}", Name, Type, Length);
+            }
+        }
+
+        private readonly Dictionary<Column, string> Data = new Dictionary<Column, string>();
         private List<string> Lines;
         private string BaseFile;
         private string NewLineChar;
 
         public string this[string key]
         {
-            get => Data.ContainsKey(key) ? Data[key] : "";
+            get {
+                var column = Data.Keys.FirstOrDefault(c => c.Name == key);
+
+                if (column == null) {
+                    return "";
+                }
+
+                return Data[column];
+            }
             set
             {
-                if (Data.ContainsKey(key))
-                    Data[key] = value;
+                var column = Data.Keys.FirstOrDefault(c => c.Name == key);
+
+                if (column == null) {
+                    return;
+                }
+
+                Data[column] = value;
             }
+        }
+
+        public SingleConfig(string fileName, Dictionary<Column, string> defaults)
+        {
+            Data = defaults;
+            Lines = new List<string>();
+            BaseFile = fileName;
         }
 
         public SingleConfig(string file, string key, string value)
@@ -61,36 +109,19 @@ namespace CASCEdit.Configs
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
             using (var writer = new StreamWriter(stream))
             {
-                writer.NewLine = NewLineChar;
+                writer.WriteLine(string.Join("|", Data.Keys.Select(c => c.ToString())));
 
-                for (int i = 0; i < Lines.Count; i++)
-                {
-                    if (i == 1)
-                    {
-                        // fill all locales / just the data based on the config
-                        switch (Path.GetFileNameWithoutExtension(BaseFile))
-                        {
-                            case "versions":
-                                PopulateLocales("Region", writer);
-                                break;
-                            case "cdns":
-                                PopulateLocales("Name", writer);
-                                break;
-                            default:
-                                writer.Write(string.Join("|", Data.Values));
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        writer.Write(Lines[i]);
-                    }
-
-                    if (i < Lines.Count - 1)
-                        writer.WriteLine();
+                switch(BaseFile) {
+                    case "versions":
+                        PopulateLocales(Data.Keys.First(), writer);
+                        break;
+                    case "cdns":
+                        PopulateLocales(Data.Keys.First(), writer);
+                        break;
+                    default: break;
                 }
-
-                writer.Flush();
+                
+                writer.WriteLine();
                 stream.Flush();
             }
         }
@@ -98,46 +129,46 @@ namespace CASCEdit.Configs
 
         private void Parse(BinaryReader reader, string key, string value)
         {
-			reader.BaseStream.Position = 0;
+			// reader.BaseStream.Position = 0;
 
-            string content = Encoding.UTF8.GetString(reader.ReadBytes((int)reader.BaseStream.Length));
+            // string content = Encoding.UTF8.GetString(reader.ReadBytes((int)reader.BaseStream.Length));
 
-            NewLineChar = GetLineTerminator(content);
-            Lines = content.Split(new string[] { NewLineChar }, StringSplitOptions.None).ToList();
+            // NewLineChar = GetLineTerminator(content);
+            // Lines = content.Split(new string[] { NewLineChar }, StringSplitOptions.None).ToList();
 
-            List<string> fields = new List<string>();
+            // List<string> fields = new List<string>();
 
-            for (int i = 0; i < Lines.Count; i++)
-            {
-                // ignore comments and blank
-                if (string.IsNullOrWhiteSpace(Lines[i]) || Lines[i].StartsWith("#"))
-                    continue;
+            // for (int i = 0; i < Lines.Count; i++)
+            // {
+            //     // ignore comments and blank
+            //     if (string.IsNullOrWhiteSpace(Lines[i]) || Lines[i].StartsWith("#"))
+            //         continue;
 
-                string[] tokens = Lines[i].Split('|');
+            //     string[] tokens = Lines[i].Split('|');
 
-                if (fields.Count == 0)
-                {
-                    // get header row
-                    for (int x = 0; x < tokens.Length; x++)
-                        fields.Add(tokens[x].Split('!').First());
-                }
-                else
-                {
-                    // ignore lines not matching the indentifier key value
-                    int keyidx = fields.IndexOf(key);
-                    if (keyidx >= 0 && tokens[keyidx] != value)
-                    {
-                        Lines.RemoveAt(i--);
-                        continue;
-                    }
+            //     if (fields.Count == 0)
+            //     {
+            //         // get header row
+            //         for (int x = 0; x < tokens.Length; x++)
+            //             fields.Add(tokens[x].Split('!').First());
+            //     }
+            //     else
+            //     {
+            //         // ignore lines not matching the indentifier key value
+            //         int keyidx = fields.IndexOf(key);
+            //         if (keyidx >= 0 && tokens[keyidx] != value)
+            //         {
+            //             Lines.RemoveAt(i--);
+            //             continue;
+            //         }
 
-                    for (int x = 0; x < tokens.Length; x++)
-                        Data.Add(fields[x], tokens[x]);
-                }
-            }
+            //         for (int x = 0; x < tokens.Length; x++)
+            //             Data.Add(fields[x], tokens[x]);
+            //     }
+            // }
 
-            if (Data.Count == 0)
-                CASContainer.Logger.LogError($"Invalid config file: {Path.GetFileName(BaseFile)}");
+            // if (Data.Count == 0)
+            //     CASContainer.Logger.LogError($"Invalid config file: {Path.GetFileName(BaseFile)}");
         }
 
         private string GetLineTerminator(string content)
@@ -150,13 +181,13 @@ namespace CASCEdit.Configs
                 return "\n";
         }
 
-        private void PopulateLocales(string key, TextWriter writer)
+        private void PopulateLocales(Column column, TextWriter writer)
         {
             string[] locales = new[] { "eu", "tw", "us", "kr", "cn" };
 
             for (int i = 0; i < locales.Length; i++)
             {
-                Data[key] = locales[i];
+                Data[column] = locales[i];
                 writer.Write(string.Join("|", Data.Values));
 
                 if (i < locales.Length - 1)

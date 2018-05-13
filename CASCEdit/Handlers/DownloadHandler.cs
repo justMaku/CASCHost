@@ -24,12 +24,41 @@ namespace CASCEdit.Handlers
 		public DownloadHandler()
 		{
 			Header = new DownloadHeader();
+
+			endofStageIndex = new int[]
+			{
+				Entries.FindLastIndex(x => x.Stage == 0),
+				Entries.FindLastIndex(x => x.Stage == 1)
+			};
+
 			EncodingMap = new[]
 			{
 				new EncodingMap(EncodingType.None, 6),
 				new EncodingMap(EncodingType.None, 6),
 				new EncodingMap(EncodingType.ZLib, 9)
 			};
+
+			var os = new[] {"OSX"};
+			var osTags = os.Select(n => new DownloadTag(){ Name = n, Type = 1, BitMask = new BoolArray()});
+			Tags.AddRange(osTags);
+
+			// Tags.Add(new DownloadTag() {Name = "Alternate", Type = 16384, BitMask = new BoolArray()});
+
+			var arch = new[] {"x86_64", "x86_32"};
+			var archTags = arch.Select(n => new DownloadTag(){ Name = n, Type = 2, BitMask = new BoolArray()});
+			Tags.AddRange(archTags);
+
+			var locale = new[] {"enUS", "esES", "esMX", "frFR", "itIT", "koKR", "ptBR", "ruRU", "zhCN", "zhTW"};
+			var localeTags = locale.Select(n => new DownloadTag(){ Name = n, Type = 3, BitMask = new BoolArray()});
+			Tags.AddRange(localeTags);
+
+			var region = new[] {"CN", "EU", "KR", "TW", "US"};
+			var regionTags = region.Select(n => new DownloadTag(){ Name = n, Type = 4, BitMask = new BoolArray()});
+			Tags.AddRange(regionTags);
+
+			var category = new[] {"speech", "text"};
+			var categoryTags = category.Select(n => new DownloadTag(){ Name = n, Type = 5, BitMask = new BoolArray()});
+			Tags.AddRange(categoryTags);
 		}
 
 		public DownloadHandler(BLTEStream blte)
@@ -112,17 +141,25 @@ namespace CASCEdit.Handlers
 
 				Entries.Insert(index, entry);
 
-				foreach (var tag in Tags)
-					if (tag.Name != "Alternate")
+				foreach (var tag in Tags) {
+					if (tag.Name != "Alternate") {
 						tag.BitMask.Insert(index, true);
+					} else {
+						tag.BitMask.Insert(index, false);
+					}
+				} 
 			}
 			else
 			{
 				Entries.Add(entry);
 
-				foreach (var tag in Tags)
-					if (tag.Name != "Alternate")
+				foreach (var tag in Tags) {
+					if (tag.Name != "Alternate") {
 						tag.BitMask.Add(true);
+					} else {
+						tag.BitMask.Add(false);
+					}
+				}
 			}
 		}
 
@@ -162,10 +199,17 @@ namespace CASCEdit.Handlers
 			{
 				foreach (var entry in Entries)
 				{
+					if(Header.Version > 1) {
+						bw.Write((byte)0x00);
+					}
 					bw.Write(entry.Hash.Value);
 					bw.WriteUInt40BE(entry.FileSize);
 					bw.Write(entry.Stage);
 					bw.Write(entry.UnknownData);
+				}
+
+				if(Header.Version > 1) {
+					bw.Write((byte)0x00);
 				}
 
 				entries[1] = ms.ToArray();

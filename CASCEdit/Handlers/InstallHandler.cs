@@ -27,6 +27,28 @@ namespace CASCEdit.Handlers
 				new EncodingMap(EncodingType.ZLib, 9),
 				new EncodingMap(EncodingType.None, 6),
 			};
+
+			var os = new[] {"OSX"};
+			var osTags = os.Select(n => new InstallTag(){ Name = n, Type = 1, BitMask = new BoolArray()});
+			Tags.AddRange(osTags);
+
+			Tags.Add(new InstallTag() {Name = "Alternate", Type = 16384, BitMask = new BoolArray()});
+
+			var arch = new[] {"x86_64", "x86_32"};
+			var archTags = arch.Select(n => new InstallTag(){ Name = n, Type = 2, BitMask = new BoolArray()});
+			Tags.AddRange(archTags);
+
+			var locale = new[] {"enUS", "esES", "esMX", "frFR", "itIT", "koKR", "ptBR", "ruRU", "zhCN", "zhTW"};
+			var localeTags = locale.Select(n => new InstallTag(){ Name = n, Type = 3, BitMask = new BoolArray()});
+			Tags.AddRange(localeTags);
+
+			var region = new[] {"CN", "EU", "KR", "TW", "US"};
+			var regionTags = region.Select(n => new InstallTag(){ Name = n, Type = 4, BitMask = new BoolArray()});
+			Tags.AddRange(regionTags);
+
+			var category = new[] {"speech", "text"};
+			var categoryTags = category.Select(n => new InstallTag(){ Name = n, Type = 5, BitMask = new BoolArray()});
+			Tags.AddRange(categoryTags);
 		}
 
 		public InstallHandler(BLTEStream blte)
@@ -78,11 +100,28 @@ namespace CASCEdit.Handlers
 			blte?.Dispose();
 		}
 
-		public void Write(List<CASResult> newentries)
+		public void Add(CASResult file)
 		{
-			if (!NeedsWrite(newentries))
-				return;
+			var entry = new InstallEntry()
+			{
+				Name = file.Path,
+				MD5 = file.Hash,
+				Size = file.CompressedSize
+			};
 
+			foreach (var tag in Tags) {
+				if (tag.Name != "Alternate") {
+					tag.BitMask.Add(true);
+				} else {
+					tag.BitMask.Add(false);
+				}
+			}
+
+			InstallData.Add(entry);
+		}
+
+		public CASResult Write()
+		{
 			byte[][] entries = new byte[EncodingMap.Length][];
 			CASFile[] files = new CASFile[EncodingMap.Length];
 
@@ -139,6 +178,8 @@ namespace CASCEdit.Handlers
 
 			Array.Resize(ref entries, 0);
 			Array.Resize(ref files, 0);
+
+			return res;
 		}
 
 		private bool NeedsWrite(List<CASResult> entries)
@@ -150,6 +191,11 @@ namespace CASCEdit.Handlers
 			foreach (var file in files)
 			{
 				var entry = entries.Where(x => !string.IsNullOrWhiteSpace(x?.Path)).FirstOrDefault(x => x.Path.ToLower().EndsWith(file));
+
+				if (entry == null) {
+					continue;
+				}
+
 				var existing = InstallData.FirstOrDefault(x => x.Name.ToLower() == file);
 
 				if (entry != null && existing != null)

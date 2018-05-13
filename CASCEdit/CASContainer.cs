@@ -18,7 +18,7 @@ using System.Threading.Tasks.Dataflow;
 
 namespace CASCEdit
 {
-    public static class CASContainer
+public static class CASContainer
     {
         public static CASSettings Settings { get; private set; }
         public static string BasePath => Settings.BasePath;
@@ -36,6 +36,54 @@ namespace CASCEdit
         public static RootHandler RootHandler { get; private set; }
         public static DownloadHandler DownloadHandler { get; private set; }
         public static InstallHandler InstallHandler { get; private set; }
+
+        public static void New(CASSettings settings)
+        {
+            Settings = settings;
+            RootHandler = new RootHandler();
+            EncodingHandler = new EncodingHandler();
+            InstallHandler = new InstallHandler();
+            CDNIndexHandler = new CDNIndexHandler(false);
+            DownloadHandler = new DownloadHandler();
+
+            var buildConfigDefaults = new Dictionary<string, List<string>>();
+            buildConfigDefaults.Add("root", new List<string>(new [] {""}));
+            buildConfigDefaults.Add("encoding", new List<string>(new [] {"", ""}));
+            buildConfigDefaults.Add("encoding-size", new List<string>(new [] {"", ""}));
+            buildConfigDefaults.Add("install", new List<string>(new [] {"", ""}));
+            buildConfigDefaults.Add("install-size", new List<string>(new [] {"", ""}));
+            buildConfigDefaults.Add("download", new List<string>(new [] {"", ""}));
+            buildConfigDefaults.Add("download-size", new List<string>(new [] {"", ""}));
+
+            var cdnConfigDefaults = new Dictionary<string, List<string>>();
+            cdnConfigDefaults.Add("archives", new List<string>(new [] {""}));
+            cdnConfigDefaults.Add("archive-group", new List<string>(new [] {"", ""}));
+
+            var buildInfoDefaults = new Dictionary<SingleConfig.Column, string>();
+            buildInfoDefaults.Add(SingleConfig.Column.withString("Version"), "7.3.5.26365");
+
+            var versionsDefaults = new Dictionary<SingleConfig.Column, string>();
+            versionsDefaults.Add(SingleConfig.Column.withString("Region"), "");
+            versionsDefaults.Add(SingleConfig.Column.withHex("BuildConfig", 16), "");
+            versionsDefaults.Add(SingleConfig.Column.withHex("CDNConfig", 16), "");
+            versionsDefaults.Add(SingleConfig.Column.withHex("KeyRing", 16), "");
+            versionsDefaults.Add(new SingleConfig.Column("BuildId", "DEC", 4), "26365");
+            versionsDefaults.Add(SingleConfig.Column.withString("VersionsName"), "7.3.5.");
+            versionsDefaults.Add(SingleConfig.Column.withHex("ProductConfig", 16), "");
+
+            var cdnsDefaults = new Dictionary<SingleConfig.Column, string>();
+            cdnsDefaults.Add(SingleConfig.Column.withString("Name"), "");
+            cdnsDefaults.Add(SingleConfig.Column.withString("Path"), "tpr/wow");
+            cdnsDefaults.Add(SingleConfig.Column.withString("Hosts"), "");
+            cdnsDefaults.Add(SingleConfig.Column.withString("ConfigPath"), "tpr/configs/data");
+            cdnsDefaults.Add(SingleConfig.Column.withString("Servers"), "");
+
+            BuildConfig = new MultiConfig(buildConfigDefaults);
+            CDNConfig = new MultiConfig(cdnConfigDefaults);
+            BuildInfo = new SingleConfig(".build.info", buildInfoDefaults);
+            Versions = new SingleConfig("versions", versionsDefaults);
+            CDNs = new SingleConfig("cdns", cdnsDefaults);
+        }
 
         public static void Open(CASSettings settings)
         {
@@ -362,7 +410,7 @@ namespace CASCEdit
 			if(InstallHandler != null)
 			{
 				Settings.Logger.LogInformation("Starting Install.");
-				InstallHandler.Write(entries);
+				entries.Add(InstallHandler.Write()); //Add to entry list
 			}
 
 			// Encoding
