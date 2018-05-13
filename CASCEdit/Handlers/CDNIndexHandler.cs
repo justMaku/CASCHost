@@ -41,12 +41,12 @@ namespace CASCEdit.Handlers
 			ArchiveIndexHandler archive = Archives[0];
 
 			//Remove missing existing entries
-			archive.Entries.RemoveAll(x => !File.Exists(Path.Combine(CASContainer.Settings.OutputPath, x.Hash.ToString())));
+			archive.Entries.RemoveAll(x => !File.Exists(Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, x.Hash.ToString()))));
 
 			//Add entries
 			foreach (var blte in entries)
 			{
-				if (!File.Exists(Path.Combine(CASContainer.Settings.OutputPath, blte.Hash.ToString())))
+				if (!File.Exists(Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, blte.Hash.ToString()))))
 					continue;
 
 				var entry = new IndexEntry()
@@ -80,8 +80,9 @@ namespace CASCEdit.Handlers
 
 				foreach (var entry in archive.Entries)
 				{
-					string entrypath = Path.Combine(CASContainer.Settings.OutputPath, entry.Hash.ToString());
-					new FileInfo(entrypath).OpenRead().CopyTo(fs);
+					string entryPath = Helper.FixOutputPath(Path.Combine(CASContainer.Settings.OutputPath, entry.Hash.ToString()));
+					var entryData = new FileInfo(entryPath).OpenRead();
+					entryData.CopyTo(fs);
 					fs.Flush();
 				}
 			}
